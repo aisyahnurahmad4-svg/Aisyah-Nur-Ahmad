@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Refleksi 2026</title>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;700&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    
+    <style>
+        :root {
+            --bg-color: #f9f7f2;
+            --card-bg: #fffdf9;
+            --text-main: #333;
+            --text-muted: #888;
+            --accent: #555;
+        }
+
+        body {
+            margin: 0;
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .container {
+            width: 90%;
+            max-width: 500px;
+            height: 85vh;
+            background: var(--card-bg);
+            border-radius: 24px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.06);
+            padding: 40px;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            box-sizing: border-box;
+        }
+
+        .header-info {
+            font-size: 13px;
+            letter-spacing: 0.5px;
+            color: var(--text-muted);
+            margin-bottom: 25px;
+            text-transform: uppercase;
+        }
+
+        h1, .question-text {
+            font-family: 'Playfair Display', serif;
+            font-size: 24px;
+            line-height: 1.4;
+            margin-bottom: 20px;
+            color: #222;
+        }
+
+        textarea {
+            width: 100%;
+            flex-grow: 1;
+            border: none;
+            background: transparent;
+            font-family: 'Inter', sans-serif;
+            font-size: 16px;
+            line-height: 1.8;
+            resize: none;
+            outline: none;
+            color: #444;
+            border-left: 2px solid #e0e0e0;
+            padding-left: 20px;
+        }
+
+        .nav-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 25px;
+        }
+
+        button {
+            flex: 1;
+            background: white;
+            border: 1px solid #ddd;
+            padding: 12px;
+            border-radius: 12px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: 0.3s;
+        }
+
+        button:hover { background: #f0f0f0; }
+        button:disabled { opacity: 0.3; }
+
+        .btn-download {
+            background: #222;
+            color: white;
+            border: none;
+        }
+
+        /* Styling PDF Layout */
+        #summary-page {
+            overflow-y: auto;
+            padding-right: 10px;
+        }
+
+        .summary-item {
+            margin-bottom: 25px;
+            page-break-inside: avoid;
+        }
+
+        .summary-q {
+            font-size: 12px;
+            color: #999;
+            text-transform: uppercase;
+            margin-bottom: 5px;
+        }
+
+        .summary-a {
+            font-family: 'Playfair Display', serif;
+            font-size: 17px;
+            color: #222;
+            white-space: pre-wrap;
+        }
+
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+
+<div class="container" id="capture-area">
+    <div id="info-header" class="header-info">
+        <span id="date-now">1 Januari 2026</span><br>
+        <span id="step-info">Refleksi</span>
+    </div>
+
+    <div id="content-area" style="flex-grow: 1; display: flex; flex-direction: column;">
+        <div id="question-title" class="question-text">Pencapaian apa yang paling membanggakan?</div>
+        <textarea id="answer-input" placeholder="Tulis di sini..."></textarea>
+    </div>
+
+    <div id="summary-page" class="hidden" style="flex-grow: 1;">
+        <h1 style="font-size: 22px; border-bottom: 2px solid #f0f0f0; padding-bottom: 10px;">Jurnal Refleksi 2026</h1>
+        <div id="summary-list"></div>
+    </div>
+
+    <div class="nav-buttons">
+        <button id="prev-btn" onclick="movePage(-1)">Kembali</button>
+        <button id="next-btn" onclick="movePage(1)">Selanjutnya</button>
+        <button id="download-btn" class="btn-download hidden" onclick="downloadPDF()">Download PDF</button>
+    </div>
+</div>
+
+<script>
+    const questions = [
+        "Apa pencapaian terbesarku tahun ini yang paling membanggakan?",
+        "Jika 2026 berjalan ideal, aku ingin menjadi pribadi seperti apa?",
+        "Nilai hidup apa yang ingin aku pegang teguh?",
+        "Apa prioritas utamaku dan apa yang harus dikurangi?",
+        "Tiga tujuan terpenting yang ingin aku capai?",
+        "Skill apa yang wajib aku tingkatkan?",
+        "Kebiasaan buruk apa yang harus aku hentikan?",
+        "Rutinitas kecil apa yang akan mengubah hidupku?",
+        "Bagaimana caraku menjaga kesehatan mental?",
+        "Pesan untuk diriku di akhir tahun 2026?"
+    ];
+
+    let currentIndex = -1; 
+    let answers = JSON.parse(localStorage.getItem("answers2026")) || Array(questions.length).fill("");
+
+    const questionTitle = document.getElementById("question-title");
+    const answerInput = document.getElementById("answer-input");
+    const stepInfo = document.getElementById("step-info");
+    const summaryPage = document.getElementById("summary-page");
+    const contentArea = document.getElementById("content-area");
+    const summaryList = document.getElementById("summary-list");
+    const downloadBtn = document.getElementById("download-btn");
+
+    function updateUI() {
+        contentArea.classList.remove("hidden");
+        summaryPage.classList.add("hidden");
+        downloadBtn.classList.add("hidden");
+        document.getElementById("prev-btn").disabled = (currentIndex === -1);
+        
+        if (currentIndex === -1) {
+            stepInfo.innerText = "Pembukaan";
+            questionTitle.innerText = "Haii,, Pesan ku untuk ais tahun 2026 😍";
+            answerInput.classList.add("hidden");
+            document.getElementById("next-btn").innerText = "Mulai Refleksi";
+        } 
+        else if (currentIndex < questions.length) {
+            stepInfo.innerText = `Refleksi ${currentIndex + 1} dari ${questions.length}`;
+            questionTitle.innerText = questions[currentIndex];
+            answerInput.classList.remove("hidden");
+            answerInput.value = answers[currentIndex];
+            document.getElementById("next-btn").innerText = "Selanjutnya";
+            document.getElementById("next-btn").classList.remove("hidden");
+        } 
+        else {
+            stepInfo.innerText = "Ringkasan";
+            contentArea.classList.add("hidden");
+            summaryPage.classList.remove("hidden");
+            downloadBtn.classList.remove("hidden");
+            document.getElementById("next-btn").classList.add("hidden");
+            renderSummary();
+        }
+    }
+
+    function movePage(step) {
+        if (currentIndex >= 0 && currentIndex < questions.length) {
+            answers[currentIndex] = answerInput.value;
+            localStorage.setItem("answers2026", JSON.stringify(answers));
+        }
+        currentIndex += step;
+        updateUI();
+    }
+
+    function renderSummary() {
+        summaryList.innerHTML = "";
+        questions.forEach((q, i) => {
+            const div = document.createElement("div");
+            div.className = "summary-item";
+            div.innerHTML = `
+                <div class="summary-q">Pertanyaan ${i + 1}</div>
+                <div class="summary-a">${answers[i] || "<i>Belum dijawab</i>"}</div>
+            `;
+            summaryList.appendChild(div);
+        });
+    }
+
+    function downloadPDF() {
+        const element = document.getElementById('summary-page');
+        const opt = {
+            margin:       1,
+            filename:     'Refleksi_2026_Ais.pdf',
+            image:        { type: 'jpeg', quality: 0.98 },
+            html2canvas:  { scale: 2 },
+            jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' }
+        };
+        html2pdf().set(opt).from(element).save();
+    }
+
+    updateUI();
+</script>
+
+</body>
+</html>
